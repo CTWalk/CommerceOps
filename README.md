@@ -1,23 +1,34 @@
-# CommerceOps Quality Engineering — public export branch
+# CommerceOps Quality Engineering
 
-This is an **orphan staging branch** used to assemble the curated public CommerceOps QA/SDET portfolio.
+CommerceOps is a private multi-role commerce application used as a production-scale system under test. This publication workspace contains the material intended for a public QA/SDET showcase: verification reasoning, selected engineering case studies, methodology, and first-party product evidence.
 
-It is intentionally independent from the private `Shooting_App` Git history. The branch exists so reviewed public material can be prepared and inspected without exposing the private application's ancestry, implementation, release configuration, credentials, or unrelated repository history.
+The complete application source, backend, native projects, production configuration, and release machinery are intentionally not part of the public showcase.
 
-## What belongs here
+## What this showcase demonstrates
 
-Only material explicitly approved for public exposure, such as:
+The focus is not framework count. It is how verification responsibility is assigned:
 
-- QA/SDET portfolio documentation and methodology;
-- selected Playwright, Appium, Maestro, API, and supporting test code;
-- selected testability examples;
-- first-party CommerceOps evidence with verified provenance.
+```text
+browser behavior        → Playwright
+hybrid/native contract  → Appium
+packaged black-box UX   → Maestro
+business/domain truth   → API / persisted state
+rendered truth          → geometry / pixels / accessibility + data oracle
+```
 
-## What this branch is not
+Start with:
 
-- It is **not** the CommerceOps product or App Store release source of truth.
-- It is **not** a development branch for the private application.
-- It must never receive a merge from private `main`.
-- It must not contain private release/signing material, secrets, raw private diagnostics, or unreviewed source files.
+1. `docs/system-under-test.md` — what CommerceOps is and why it is a useful SUT.
+2. `docs/architecture/layer-ownership.md` — why each test layer exists.
+3. `case-studies/refund-lifecycle/` — the flagship cross-role workflow.
+4. `case-studies/hybrid-mobile-testing/` — Playwright/Appium/Maestro boundary design.
+5. `methodology/` — how failures are classified and how verification evidence is accepted.
+6. `evidence/` — verified first-party CommerceOps product scenes.
 
-The private `Shooting_App/main` branch remains the authoritative product and release repository. This branch is disposable publication staging whose contents may later be pushed to the public CommerceOps repository after review.
+## Code exposure
+
+Runnable automation remains authoritative in the private product repository. During public export, a reviewed subset is copied into normalized `tests/` and `testability/` paths. This directory therefore owns the public narrative and evidence, not duplicate working copies of the private regression suite.
+
+## Evidence rule
+
+Every image under `evidence/` must be first-party CommerceOps UI with recorded provenance. Third-party design-reference captures, raw logs, temporary screenshots, machine identifiers, secrets, and unreviewed failure artifacts do not belong here.

@@ -1,0 +1,335 @@
+appId: com.tpisoftware.commerceops
+name: M-15 RF-01 refund case lifecycle from customer request to completion
+tags:
+  - maestro
+  - business
+  - refund
+  - rbac
+  - observable
+androidWebViewHierarchy: devtools
+onFlowStart:
+  - runScript:
+      file: ../../scripts/reset-backend.js
+      env:
+        MAESTRO_BACKEND_URL: ${MAESTRO_BACKEND_URL}
+---
+- launchApp:
+    clearState: true
+- runFlow:
+    file: ../../subflows/login-role.yaml
+    env:
+      ROLE_LABEL: Customer
+- runScript:
+    file: ../../scripts/assert-auth-event.js
+    env:
+      MAESTRO_BACKEND_URL: ${MAESTRO_BACKEND_URL}
+      EXPECTED_EVENT_TYPE: auth_login
+      EXPECTED_ROLE: customer
+- assertVisible: "Essentials for right now."
+- takeScreenshot: M15_customer_session_authenticated
+- runFlow: ../../subflows/add-packable-rain-shell.yaml
+- takeScreenshot: M15_customer_cart_ready
+- tapOn:
+    text: "Checkout"
+    enabled: true
+- extendedWaitUntil:
+    visible: "Checkout"
+    timeout: 10000
+- tapOn:
+    id: "checkout-address-name"
+- inputText: "Maestro Refund Customer"
+- hideKeyboard
+- tapOn:
+    id: "checkout-city"
+- inputText: "Taipei"
+- hideKeyboard
+- tapOn:
+    id: "checkout-address-line"
+- inputText: "15 Observable Way"
+- hideKeyboard
+- tapOn:
+    id: "checkout-request-quote"
+- extendedWaitUntil:
+    visible:
+      id: "checkout-quote-ready"
+    timeout: 10000
+- runScript:
+    file: ../../scripts/assert-checkout-state.js
+    env:
+      MAESTRO_BACKEND_URL: ${MAESTRO_BACKEND_URL}
+      CHECKPOINT: M15_shipping_quote_ready
+      EXPECTED_QUOTE_STATUS: ready
+- takeScreenshot: M15_shipping_quote_persisted
+- scrollUntilVisible:
+    element:
+      id: "card-name"
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    id: "card-name"
+- inputText: "Maestro Refund Customer"
+- hideKeyboard
+- tapOn:
+    id: "card-number"
+- inputText: "4242424242424242"
+- hideKeyboard
+- tapOn:
+    id: "card-expiry"
+- inputText: "1230"
+- hideKeyboard
+- tapOn:
+    id: "card-cvc"
+- inputText: "123"
+- hideKeyboard
+- tapOn: "Confirm payment"
+- scrollUntilVisible:
+    element:
+      text: "Payment ready"
+    direction: DOWN
+    timeout: 10000
+- extendedWaitUntil:
+    visible: "Payment ready"
+    timeout: 10000
+- runScript:
+    file: ../../scripts/assert-checkout-state.js
+    env:
+      MAESTRO_BACKEND_URL: ${MAESTRO_BACKEND_URL}
+      CHECKPOINT: M15_payment_complete
+      EXPECTED_PAYMENT_COMPLETE: "true"
+- takeScreenshot: M15_payment_completion_persisted
+- scrollUntilVisible:
+    element:
+      text: "Place order"
+    direction: DOWN
+- tapOn:
+    text: "Place order"
+    enabled: true
+- extendedWaitUntil:
+    visible: "Orders"
+    timeout: 10000
+- runScript:
+    file: ../../scripts/assert-order-placed.js
+    env:
+      MAESTRO_BACKEND_URL: ${MAESTRO_BACKEND_URL}
+- assertVisible: ${output.checkout.orderId}
+- takeScreenshot: M15_customer_order_placed
+- scrollUntilVisible:
+    element:
+      id: "order-row-${output.checkout.orderId}"
+    direction: DOWN
+    centerElement: true
+    timeout: 10000
+- tapOn:
+    id: "order-row-${output.checkout.orderId}"
+    enabled: true
+- extendedWaitUntil:
+    visible: ${output.checkout.orderId}
+    timeout: 10000
+- scrollUntilVisible:
+    element:
+      text: "Reason"
+    direction: DOWN
+    timeout: 10000
+- tapOn: "Reason"
+- inputText: "The size did not fit."
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      text: "Request refund"
+    direction: DOWN
+    timeout: 10000
+- assertVisible: "Request refund"
+- takeScreenshot: M15_customer_opens_dynamic_order
+- tapOn:
+    text: "Request refund"
+    enabled: true
+- extendedWaitUntil:
+    visible: "Refund request saved."
+    timeout: 10000
+- extendedWaitUntil:
+    visible:
+      id: "order-refund-lifecycle"
+    timeout: 10000
+- assertVisible: "Refund requested"
+- assertVisible: "We're reviewing your request. No action is needed right now."
+- assertVisible: "The size did not fit."
+- runScript:
+    file: ../../scripts/assert-order-stage.js
+    env:
+      MAESTRO_BACKEND_URL: ${MAESTRO_BACKEND_URL}
+      CHECKPOINT: M15_customer_refund_requested
+      ORDER_ID: ${output.checkout.orderId}
+      EXPECTED_EVENT_TYPE: refund_requested
+      EXPECTED_ROLE: customer
+      EXPECTED_REFUND_STATUS: requested
+      EXPECTED_FROM: none
+      EXPECTED_TO: requested
+- takeScreenshot: M15_customer_refund_request_persisted
+- runFlow: ../../subflows/logout.yaml
+- extendedWaitUntil:
+    visible:
+      id: "email"
+    timeout: 10000
+- runFlow:
+    file: ../../subflows/login-role.yaml
+    env:
+      ROLE_LABEL: Support
+- scrollUntilVisible:
+    element:
+      id: "support-refund-todo-${output.checkout.orderId}"
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    id: "support-refund-todo-${output.checkout.orderId}"
+- extendedWaitUntil:
+    visible:
+      id: "support-escalate-refund"
+    timeout: 10000
+- assertVisible: "Needs review"
+- assertVisible:
+    id: "support-escalate-refund"
+    enabled: true
+- takeScreenshot: M15_case_handler_needs_review
+- scrollUntilVisible:
+    element:
+      id: "support-escalate-refund"
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    id: "support-escalate-refund"
+    enabled: true
+- extendedWaitUntil:
+    visible: "Sent for approval."
+    timeout: 10000
+- assertVisible: "Approval required"
+- runScript:
+    file: ../../scripts/assert-order-stage.js
+    env:
+      MAESTRO_BACKEND_URL: ${MAESTRO_BACKEND_URL}
+      CHECKPOINT: M15_cs_escalates_refund
+      ORDER_ID: ${output.checkout.orderId}
+      EXPECTED_EVENT_TYPE: refund_escalated
+      EXPECTED_ROLE: support
+      EXPECTED_REFUND_STATUS: escalated
+      EXPECTED_FROM: requested
+      EXPECTED_TO: escalated
+- takeScreenshot: M15_case_waiting_for_approval
+- runFlow: ../../subflows/logout.yaml
+- extendedWaitUntil:
+    visible:
+      id: "email"
+    timeout: 10000
+- runFlow:
+    file: ../../subflows/login-role.yaml
+    env:
+      ROLE_LABEL: Supervisor
+- extendedWaitUntil:
+    visible: "Approval required"
+    timeout: 10000
+- assertVisible:
+    id: "supervisor-approve-refund"
+    enabled: true
+- takeScreenshot: M15_approver_reviews_same_case
+- scrollUntilVisible:
+    element:
+      id: "supervisor-approve-refund"
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    id: "supervisor-approve-refund"
+    enabled: true
+- extendedWaitUntil:
+    visible: "Refund approved and handed off for completion."
+    timeout: 10000
+- runScript:
+    file: ../../scripts/assert-order-stage.js
+    env:
+      MAESTRO_BACKEND_URL: ${MAESTRO_BACKEND_URL}
+      CHECKPOINT: M15_supervisor_approves_refund
+      ORDER_ID: ${output.checkout.orderId}
+      EXPECTED_EVENT_TYPE: refund_supervisor_approved
+      EXPECTED_ROLE: supervisor
+      EXPECTED_REFUND_STATUS: pending_cs_confirmation
+      EXPECTED_FROM: escalated
+      EXPECTED_TO: pending_cs_confirmation
+- takeScreenshot: M15_approver_hands_case_off
+- runFlow: ../../subflows/logout.yaml
+- extendedWaitUntil:
+    visible:
+      id: "email"
+    timeout: 10000
+- runFlow:
+    file: ../../subflows/login-role.yaml
+    env:
+      ROLE_LABEL: Support
+- extendedWaitUntil:
+    visible: "Ready to complete"
+    timeout: 10000
+- scrollUntilVisible:
+    element:
+      id: "support-refund"
+    direction: DOWN
+    centerElement: true
+    timeout: 10000
+- assertVisible:
+    id: "support-refund"
+    enabled: true
+- takeScreenshot: M15_case_ready_to_complete
+- tapOn:
+    id: "support-refund"
+    enabled: true
+- extendedWaitUntil:
+    visible: "Refund completed."
+    timeout: 10000
+- runScript:
+    file: ../../scripts/assert-order-stage.js
+    env:
+      MAESTRO_BACKEND_URL: ${MAESTRO_BACKEND_URL}
+      CHECKPOINT: M15_cs_confirms_refund
+      ORDER_ID: ${output.checkout.orderId}
+      EXPECTED_EVENT_TYPE: refund_cs_confirmed
+      EXPECTED_ROLE: support
+      EXPECTED_REFUND_STATUS: refunded
+      EXPECTED_ORDER_STATUS: refunded
+      EXPECTED_FULFILLMENT_STATUS: cancelled
+      EXPECTED_FROM: pending_cs_confirmation
+      EXPECTED_TO: refunded
+- takeScreenshot: M15_case_refund_completed
+- runFlow: ../../subflows/logout.yaml
+- extendedWaitUntil:
+    visible:
+      id: "email"
+    timeout: 10000
+- runFlow:
+    file: ../../subflows/login-role.yaml
+    env:
+      ROLE_LABEL: Customer
+- tapOn: "Orders"
+- extendedWaitUntil:
+    visible: "Orders"
+    timeout: 10000
+- assertVisible: ${output.checkout.orderId}
+- scrollUntilVisible:
+    element:
+      id: "order-row-${output.checkout.orderId}"
+    direction: DOWN
+    centerElement: true
+    timeout: 10000
+- tapOn:
+    id: "order-row-${output.checkout.orderId}"
+    enabled: true
+- scrollUntilVisible:
+    element:
+      id: "order-refund-lifecycle"
+    direction: DOWN
+    timeout: 10000
+- extendedWaitUntil:
+    visible: "Refund complete"
+    timeout: 10000
+- assertVisible: "Your refund has been completed."
+- runScript:
+    file: ../../scripts/assert-refund-lifecycle-events.js
+    env:
+      MAESTRO_BACKEND_URL: ${MAESTRO_BACKEND_URL}
+      ORDER_ID: ${output.checkout.orderId}
+- takeScreenshot: M15_customer_receives_refund_with_exact_event_audit
